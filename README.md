@@ -299,7 +299,7 @@
      GPIO_AFIODeInit()
     ● Mô tả: Đặt lại tất cả các thanh ghi của AFIO (Alternate Function IO) về giá trị mặc định.
 
-
+    
 
 
 
@@ -308,6 +308,73 @@
 <details>
     <summary>LESSION 2: Ngắt(Interrupt) &Timer </summary>
 
+## Interupt(Ngắt)
+    ● Ngắt là 1 sự kiện khẩn cấp xảy ra trong hay ngoài vi điều khiển. Nó yêu MCU phải dừng chương trình chính và thực thi chương trình ngắt.
+
+
+    ● Mỗi ngắt có 1 trình phục vụ ngắt, sẽ yêu cầu MCU thực thi lệnh tại trình phục vụ ngắt khi có ngắt xảy ra
+    
+    ● Các ngắt có các địa chỉ cố định trong bộ nhớ để giữ các trình phục vụ. Các địa chỉ này gọi là vector ngắt
+
+## Ngắt                    Cờ ngắt            Địa chỉ trình phục vụ ngắt            Độ ưu tiên ngắt
+  Reset                       -                        0000h                                  
+  Ngắt ngoài                 IE0                       0003h                        Lập trình được
+  Timer1                     TF1                       001Bh                        Lập trình được
+  Ngắt truyền thông                                                                 Lập trình được
+
+Quá trình thực thi ngắt:
+                        //main.c
+    0xC1                  main(){
+    0xC2                  while(1){
+    ...                 		//do something
+    0xC9                   }
+                        }
+                        
+    0xB1-0xB5           ISR(); // ngat ngoai
+    0xC3                ISR1();
+
+ ● B1: Xử lý xong câu lệnh đang chạy. (Quá trình thực thi câu lệnh mã máy qua các bước: lấy lệnh từ bộ nhớ FLASH, giải mã lệnh, thực thi lệnh)
+ 
+ ● B2: Lưu địa chỉ câu lệnh tiếp theo, lưu trạng thái hoạt động của VDK (các cờ, trạng thái năng lượng) vào vùng nhớ STACK
+ 
+ ● B3: VDK tắt bit ngắt toàn cục để ngăn chặn các ngắt khác can thiệp trong khi xử lý ngắt hiện tại. Nếu vi điều khiển đang ở chế độ tiết kiệm năng lượng, nó sẽ chuyển sang chế độ hoạt động bình thường
+
+ ● B4: Thực thi ngắt bằng cách Vi điều khiển nạp địa chỉ của chương trình phục vụ ngắt (Interrupt Service Routine - ISR) từ bảng vectơ ngắt vào thanh ghi PC
+
+ ● B5: Thực thi xong sẽ thực hiện quá trình phục hồi ngữ cảnh (unstacking)
+
+ Lưu ý: Thời gian xử lý ngắt rất nhỏ (0.005 us) nên khoảng thời gian xử lý ngắt đến câu lệnh tiếp theo là rất nhanh
+
+ Nếu có nhiều ngắt xảy ra thì VDK sẽ dựa vào mức độ ưu tiên ngắt (số càng nhỏ mức ưu tiên càng cao) để thực thi theo thứ tự.
+
+ Nếu ngắt có cùng độ ưu tiên thì VDK sẽ xét theo sub priotiy (độ ưu tiên phụ).
+
+## Các loại ngắt thông dụng
+       ● Ngắt ngoài
+            Xảy ra khi có thay đổi điện áp trên các chân GPIO được cấu hình làm ngõ vào ngắt.
+
+            LOW: kích hoạt ngắt liên tục khi chân ở mức thấp.
+            
+            HIGH: Kích hoạt liên tục khi chân ở mức cao.
+            
+            Rising: Kích hoạt khi trạng thái trên chân chuyển từ thấp lên cao.
+            
+            Falling: Kích hoạt khi trạng thái trên chân chuyển từ cao xuống thấp
+
+        ● Ngắt timer
+            Ngắt Timer xảy ra khi giá trị trong thanh ghi đếm của timer tràn. Giá trị tràn được xác định bởi giá trị cụ thể trong thanh ghi đếm của timer.
+            Vì đây là ngắt nội trong MCU, nên phải reset giá trị thanh ghi timer để có thể tạo được ngắt tiếp theo
+
+        ● Ngắt truyền nhận
+
+            Ngắt truyền nhận xảy ra khi có sự kiện truyền/nhận dữ liệu giữ MCU với các thiết bị bên ngoài hay với MCU. Ngắt này sử dụng cho nhiều phương thức như Uart, SPI, I2C…v.v nhằm đảm bảo việc truyền nhận chính xác
+
+        ● Độ ưu tiên ngắt
+
+            Độ ưu tiên ngắt là khác nhau ở các ngắt. Nó xác định ngắt nào được quyền thực thi khi nhiều ngắt xảy ra đồng thời
+            
+            STM32 quy định ngắt nào có số thứ tự ưu tiên càng thấp thì có quyền càng cao. Các ưu tiên ngắt có thể lập trình được
+            
 
 </details>
 
