@@ -1707,11 +1707,108 @@ Dữ liệu bị mất khi ngưng cấp nguồn.            Dữ liệu không b
 
 
 
+#### Note:
+
+<details>
+    <summary> Ngắt </summary>
+
+  Xảy ra khi giá trị trong thanh ghi đếm của timer vượt quá giá trị cài đặt => Timer tràn
 
 
+## Ngắt truyền thông      
+Xảy ra khi có sự kiện truyền/nhận giữa MCU với các thiết bị bên ngoài(cảm biến) hay với MCU, sử dụng cho các p thức: UART,SPI...
+sử dụng cho các p thức: UART,SPI,I2C
+Đảm bảo việc truyền nhận chính xác
 
 
+## Độ ưu tiên ngắt
+Khi xảy ra nhiều ngắt, MCU k biết ưu tiên thực hiện ngắt nào
+Ngắt nào có số ưu tiên càng thấp, quyền càng  cao
+Dựa vào stack pointer và program counter
 
+
+Stack	PC				0x01
+					...				main
+					0XA1
+
+					0XB2
+					...				Timer_ISR();   Ưu tiên cao 0
+					0XB9	
+0xE0			
+0x05	0xD4				0XD4
+					...				UART_ISR();     Ưu tiên thấp 1
+					0XE2
+
+
+								PC: 0x01->0x02...->0x04(UART)  -> 0x05
+								PC: 0xD4->0xD5...->0xD9(Timer) -> 0XE0
+								PC: 0xB2->0xB3...->0xB9 -> 0xD4
+
+								Lấy 0xE0 ra từ stack:
+								0xE0->0XE1->0XE2 -> 0xD5
+								
+								Lấy 0XD5 ra khỏi stack:
+								0xD5->0XD6...
+
+</details>
+
+
+<details>
+    <summary> Truyền thông cơ bản </summary>
+
+Truyền nhân dữ liệu là sự truyền nhận các tín hiệu điện áp biểu diễn cho các bit
+Khi 1 con MCU A truyền cho MCUB nhưng truyền 2 bit 1 hoặc 2 bit 0 liên tiếp thì thằng MCU nhận k phân biệt được MCU truyền truyền 2 bit 1 liên tiếp hay chỉ truyền được 1 bit 1 thôi
+Để phân biệt được các bit liền kề => sinh ra chuẩn giao tiếp
+
+## SPI: Giao tiếp nối tiếp đồng bộ
+	  Chế độ song công( truyền - nhận cùng thời điểm)
+	  
+	  OUT:0b 0110 1011						char arr;				
+		SCK: 0 								byte =0x01;													
+		MOSI : 1							if(SCK==1){										
+		SCK: 1								if(MOSI == 1){
+		delay(4);//4us							arr|=byte;													
+		SCK: 0								}	
+											byte <<= 1; }
+								
+
+## I2C: Giao tiếp nối tiếp đồng bộ, sử dụng 2 dây SDA và SCL
+	 1 Master giao tiếp được với nhiều slave
+	 Bán song công (không thể vừa truyền vừa nhận được trong 1 thời điểm)
+	 
+	 Bia địa chỉ: 7-10 bit( do nhà sản xuất)
+	 1 bit R/W:
+		0; Lệnh đọc của master
+		1: Lệnh ghi của master
+		
+		
+## UART: Giao tiếp nối tiếp bất đồng bộ ( Tức là không có xung clock để đồng bộ)
+	   Gồm TX và RX
+	   Song công
+	   Nó dùng timer nội để đồng bộ
+
+
+	   char arr = 0x03;					char arr; 
+	   sendStart();						byte=0x80;
+	   for(i=0; i<8; i++){				If(RX==0){
+	   Init_timer(100);2us				for(i=0; i<8…){
+	   TX= arr & 1;						Init_timer(50);2us
+	   arr>>=1;							if(RX == 1){
+	   }								arr|=byte;
+										}
+										arr >>= 1;
+										}
+										}
+										
+										
+	TX: 1
+	RX: 1
+	Start signal:
+	TX: 1->0
+	   
+	   Baud rate: Số bit truyền trong 1 giây
+
+</details>
 
 
 
